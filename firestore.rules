@@ -1,0 +1,41 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users can only read/write their own document
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Recipes are readable by creator; written only by authenticated users
+    match /recipes/{recipeId} {
+      allow read: if request.auth != null &&
+                     (resource.data.generatedFor == request.auth.uid);
+      allow create: if request.auth != null;
+      allow update, delete: if false; // immutable once created
+    }
+
+    // Comments subcollection — authenticated users can read/write
+    match /recipes/{recipeId}/comments/{commentId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow delete: if request.auth != null &&
+                       resource.data.userId == request.auth.uid;
+    }
+
+    // Favorites subcollection — owner only
+    match /favorites/{userId}/items/{recipeId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // History subcollection — owner only
+    match /history/{userId}/items/{recipeId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Preferences — owner only
+    match /preferences/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
